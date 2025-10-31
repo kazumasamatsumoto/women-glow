@@ -25,6 +25,15 @@ npx expo start
 
 ブラウザで立ち上がる Expo Dev Tools から、シミュレータまたは Expo Go (iOS / Android) に接続して動作確認できます。
 
+### OpenAI API キーの設定
+
+1. `.env.example` を `.env` にコピーします。
+   ```bash
+   cp .env.example .env
+   ```
+2. `.env` 内の `EXPO_PUBLIC_OPENAI_API_KEY` に OpenAI のシークレットキーを貼り付けます。
+3. `npx expo start --clear` を実行してバンドラーを再起動すると、チャット画面でリアルな AI 応答が得られます（未設定時はテンプレートメッセージにフォールバックします）。
+
 ## プロジェクト構成
 
 ```
@@ -67,11 +76,13 @@ src/
 AI や Firebase を導入する際は、`.env` などに以下のようなキーを追加し、`expo-constants` や `react-native-config` で読み込む運用を想定しています。
 
 ```
-OPENAI_API_KEY=your_openai_api_key
+EXPO_PUBLIC_OPENAI_API_KEY=your_openai_api_key
 FIREBASE_API_KEY=your_firebase_api_key
 APPLE_SHARED_SECRET=your_app_store_shared_secret
 GOOGLE_SERVICE_KEY_JSON=path_to_google_play_service_key
 ```
+
+`app.config.js` が `.env` を読み込み、Expo の `extra` に値を渡します。`EXPO_PUBLIC_OPENAI_API_KEY` を設定するとチャット画面から OpenAI API (gpt-4o-mini) を通じてメッセージが生成され、未設定時はテンプレートベースの文を返します。
 
 ## ライセンス
 

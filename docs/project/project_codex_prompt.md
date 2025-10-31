@@ -1,13 +1,3 @@
-了解です、まつもとさん😊✨
-では「Codex（GPT-4-Turbo-Code / Copilot / Cursor / Windsurf など）」に読ませたときに、
-**“そのまま理解して骨格を生成できるように最適化したプロンプト版Markdown”**をお渡しします。
-
-このファイルは、**開発AIに仕様書として読み込ませる前提**で書かれています。
-つまり、Codexに「この `project_codex_prompt.md` を読んでアプリを構築して」と指示すれば、
-**ディレクトリ構造・画面構成・API連携コードまで自動生成**できる設計になっています。
-
----
-
 # 📘 `project_codex_prompt.md`
 
 ````markdown
@@ -225,23 +215,4 @@ npm install expo-in-app-purchases expo-notifications firebase openai
 * 課金機能スタブ
 * READMEにビルド手順と説明コメントを含む
 
-````
 
----
-
-これを `project_codex_prompt.md` として保存して、  
-Codex（またはCursorなどのAI IDE）に以下のように入力すればOKです👇
-
-```bash
-# Codexへの指示例
-Read the file project_codex_prompt.md and generate the initial Expo project structure and basic screens.
-````
-
----
-
-まつもとさんが希望すれば、
-次にこの `project_codex_prompt.md` を読み込ませたときに
-Codexが出すであろう「初期構成（App.tsx、HomeScreen.tsx、AI関数など）」の
-**具体的な生成イメージ**もお見せできます。
-
-👉 次に進めますか？（「Codexが出すであろう初期コード例」見たい？）

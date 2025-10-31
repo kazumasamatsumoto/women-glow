@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-import { fetchAIEncouragement, type Mood } from '../services/aiService';
+import { fetchAIEncouragement, type EncouragementResponse, type Mood, type SupportedLocale } from '../services/aiService';
 
 const moods: Mood[] = ['落ち込み', '普通', '前向き'];
+const locales: Array<{ label: string; value: SupportedLocale }> = [
+  { label: '日本語', value: 'ja-JP' },
+  { label: '中文', value: 'zh-CN' },
+  { label: '한국어', value: 'ko-KR' },
+];
+
+type ChatMessage = EncouragementResponse & { id: string; mood: Mood; locale: SupportedLocale };
 
 export const ChatScreen: React.FC = () => {
   const [selectedMood, setSelectedMood] = useState<Mood>('普通');
-  const [messages, setMessages] = useState<string[]>([]);
+  const [selectedLocale, setSelectedLocale] = useState<SupportedLocale>('ja-JP');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -24,8 +24,14 @@ export const ChatScreen: React.FC = () => {
     setIsLoading(true);
     setError(undefined);
     try {
-      const aiMessage = await fetchAIEncouragement(selectedMood);
-      setMessages((prev) => [aiMessage, ...prev]);
+      const result = await fetchAIEncouragement({ mood: selectedMood, locale: selectedLocale });
+      const message: ChatMessage = {
+        ...result,
+        id: `${Date.now()}`,
+        mood: selectedMood,
+        locale: selectedLocale,
+      };
+      setMessages((prev) => [message, ...prev]);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -33,12 +39,16 @@ export const ChatScreen: React.FC = () => {
     }
   };
 
+  const latestNotice = messages[0]?.notice;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>AI励ましチャット</Text>
-        <Text style={styles.subtitle}>今の気持ちに近いものを選んでね。</Text>
+        <Text style={styles.subtitle}>気持ちと使いたい言語を選んで、AIに優しい言葉をお願いしましょう。</Text>
+
+        <Text style={styles.sectionLabel}>気分を選ぶ</Text>
 
         <View style={styles.moodRow}>
           {moods.map((mood) => {
@@ -58,6 +68,25 @@ export const ChatScreen: React.FC = () => {
           })}
         </View>
 
+        <Text style={styles.sectionLabel}>言語を選ぶ</Text>
+        <View style={styles.moodRow}>
+          {locales.map(({ label, value }) => {
+            const isActive = selectedLocale === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                activeOpacity={0.8}
+                style={[styles.moodChip, isActive ? styles.moodChipActive : undefined]}
+                onPress={() => setSelectedLocale(value)}
+              >
+                <Text style={[styles.moodChipText, isActive ? styles.moodChipTextActive : undefined]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <TouchableOpacity
           activeOpacity={0.8}
           style={[styles.generateButton, isLoading ? styles.generateButtonDisabled : undefined]}
@@ -68,14 +97,23 @@ export const ChatScreen: React.FC = () => {
         </TouchableOpacity>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {latestNotice ? <Text style={styles.noticeText}>{latestNotice}</Text> : null}
 
         <View style={styles.messagesContainer}>
           {messages.length === 0 ? (
             <Text style={styles.placeholderText}>まだメッセージはありません。気持ちを選んで受け取ってみてください。</Text>
           ) : (
-            messages.map((message, index) => (
-              <View key={`${message}-${index}`} style={styles.messageBubble}>
-                <Text style={styles.messageBubbleText}>{message}</Text>
+            messages.map((message) => (
+              <View key={message.id} style={styles.messageBubble}>
+                <View style={styles.messageMetaRow}>
+                  <Text style={styles.messageMetaText}>
+                    {message.locale} / {message.mood}
+                  </Text>
+                  <Text style={styles.messageMetaSource}>
+                    {message.source === 'openai' ? 'AI生成' : 'テンプレート'}
+                  </Text>
+                </View>
+                <Text style={styles.messageBubbleText}>{message.message}</Text>
               </View>
             ))
           )}
@@ -105,6 +143,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8e5873',
     marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8e5873',
+    marginBottom: 12,
   },
   moodRow: {
     flexDirection: 'row',
@@ -145,6 +189,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  noticeText: {
+    color: '#8e5873',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
   errorText: {
     color: '#c0392b',
     marginBottom: 16,
@@ -171,6 +221,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+  },
+  messageMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  messageMetaText: {
+    fontSize: 12,
+    color: '#8e5873',
+  },
+  messageMetaSource: {
+    fontSize: 12,
+    color: '#b85f8e',
+    fontWeight: '600',
   },
   messageBubbleText: {
     color: '#4a2f3b',
