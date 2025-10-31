@@ -1,7 +1,12 @@
 import React from 'react';
 
-import { HomeScreen } from './src/screens/HomeScreen';
+import { PurchaseProvider } from './src/store/purchaseStore';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 export default function App() {
-  return <HomeScreen />;
+  return (
+    <PurchaseProvider>
+      <RootNavigator />
+    </PurchaseProvider>
+  );
 }
