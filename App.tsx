@@ -1,12 +1,12 @@
 import React from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { PurchaseProvider } from './src/store/purchaseStore';
-import { RootNavigator } from './src/navigation/RootNavigator';
+import { ChatScreen } from './src/screens/ChatScreen';
 
-export default function App() {
+export default function App(): JSX.Element {
   return (
-    <PurchaseProvider>
-      <RootNavigator />
-    </PurchaseProvider>
+    <SafeAreaProvider>
+      <ChatScreen />
+    </SafeAreaProvider>
   );
 }

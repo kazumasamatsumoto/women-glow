@@ -75,6 +75,28 @@ const localeConfigs: Record<SupportedLocale, LocaleConfig> = {
   },
 };
 
+export const ASSISTANT_NAME = 'Glowガイド ひかり';
+export const ASSISTANT_AVATAR = '🌸';
+export const ASSISTANT_TAGLINE = 'あなたの心に寄り添う自己肯定感ナビゲーター';
+
+export type ConversationTurn = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+export type OpenAIMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+};
+
+type BuildChatMessagesParams = {
+  locale: SupportedLocale;
+  mood: Mood;
+  age: number;
+  userInput: string;
+  conversation: ConversationTurn[];
+};
+
 export function getLocaleConfig(locale: SupportedLocale): LocaleConfig {
   return localeConfigs[locale];
 }
@@ -90,32 +112,67 @@ export function getTemplatesForMood(locale: SupportedLocale, mood: Mood): string
   return templates.length ? templates : [...config.templates.affirmation, ...config.templates.healing, ...config.templates.growth];
 }
 
-export function buildPrompt(locale: SupportedLocale, mood: Mood, age: number): string {
+function buildSystemInstruction({ locale, mood, age }: BuildChatMessagesParams): string {
   const config = getLocaleConfig(locale);
-  const templates = getTemplatesForMood(locale, mood);
+  const moodLabel = config.moodLabels[mood];
   const bannedList = config.bannedPhrases.map((phrase) => `- ${phrase}`).join('\n');
-  const templateList = templates.map((phrase) => `- ${phrase}`).join('\n');
+  const templateCandidates = [
+    ...config.templates.affirmation,
+    ...config.templates.healing,
+    ...config.templates.growth,
+  ]
+    .map((phrase) => `- ${phrase}`)
+    .join('\n');
 
-  return `
-あなたは「女性の自己肯定感を高めるアプリ」のAIメッセージ作成者です。
-ユーザーの属性：${config.countryLabel}／${age}歳／気分：${config.moodLabels[mood]}
-
-禁止ワードリスト：
-${bannedList}
-
-出力ルール：
-- 肯定的でやさしい口調
-- 年齢や結婚を否定しない
-- 1文50〜80文字以内
-- 表情豊かな顔文字を入れても良い
-- 以下のテンプレートを参考に応答
-
-テンプレート例：
-${templateList}
-`.trim();
+  return [
+    `あなたは「${ASSISTANT_NAME}」というキャラクターです。${config.countryLabel}の女性に寄り添い、${config.languageLabel}で自己肯定感をそっと支えます。`,
+    `口調は親しい友人のようにあたたかく、決して命令したり否定したりせず、相手の尊厳を守ってください。`,
+    `ユーザーの属性：${config.countryLabel}／${age}歳／気分：${moodLabel}`,
+    `禁止ワード（絶対に使わない）：\n${bannedList}`,
+    `返答ルール：`,
+    `- 肯定的でやさしい言葉にする`,
+    `- 年齢や結婚、恋愛を否定的に扱わない`,
+    `- 他人比較・期限を示唆しない`,
+    `- 文章は1〜2文、合計で50〜90文字程度`,
+    `- 顔文字や絵文字は多用せず、使う場合も1つまで`,
+    `- 相手の感情を受け止めた上で、希望や安心を添える`,
+    `参考テンプレート：\n${templateCandidates}`,
+    `会話履歴を読み、最新のユーザー入力に応じた返答を生成してください。`,
+  ].join('\n');
 }
 
-export function buildFallbackMessage(locale: SupportedLocale, mood: Mood): string {
+function formatConversation(conversation: ConversationTurn[]): ConversationTurn[] {
+  return conversation
+    .map((turn) => ({
+      role: turn.role,
+      content: turn.content.trim(),
+    }))
+    .filter((turn) => turn.content.length > 0);
+}
+
+export function buildChatMessages(params: BuildChatMessagesParams): OpenAIMessage[] {
+  const { conversation, userInput } = params;
+  const systemMessage = buildSystemInstruction(params);
+  const history = formatConversation(conversation);
+  const trimmedInput = userInput.trim();
+
+  const chatHistory = history.map((turn) => ({
+    role: turn.role,
+    content: turn.content,
+  }));
+
+  return [
+    { role: 'system' as const, content: systemMessage },
+    ...chatHistory,
+    { role: 'user' as const, content: trimmedInput },
+  ];
+}
+
+export function buildFallbackMessage(locale: SupportedLocale, mood: Mood, userInput: string): string {
   const candidates = getTemplatesForMood(locale, mood);
-  return randomFrom(candidates);
+  const base = randomFrom(candidates);
+  const reflection = userInput.trim().length
+    ? '\n\nあなたが打ち明けてくれた気持ちに寄り添いながら、ゆっくり歩いていきましょう。'
+    : '';
+  return `${base}${reflection}`;
 }

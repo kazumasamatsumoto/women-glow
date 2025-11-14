@@ -1,9 +1,11 @@
 import Constants from 'expo-constants';
 
-import { buildFallbackMessage, buildPrompt, type Mood, type SupportedLocale } from './messagePrompt';
+import { buildChatMessages, buildFallbackMessage, type ConversationTurn, type Mood, type OpenAIMessage, type SupportedLocale } from './messagePrompt';
 
 type EncouragementParams = {
   mood: Mood;
+  userInput: string;
+  conversation?: ConversationTurn[];
   locale?: SupportedLocale;
   age?: number;
 };
@@ -31,15 +33,23 @@ function readApiKey(): string | undefined {
 
 export async function fetchAIEncouragement({
   mood,
+  userInput,
+  conversation = [],
   locale = DEFAULT_LOCALE,
   age = DEFAULT_AGE,
 }: EncouragementParams): Promise<EncouragementResponse> {
-  const prompt = buildPrompt(locale, mood, age);
+  const messages: OpenAIMessage[] = buildChatMessages({
+    mood,
+    locale,
+    age,
+    userInput,
+    conversation,
+  });
   const apiKey = readApiKey();
 
   if (!apiKey) {
     return {
-      message: buildFallbackMessage(locale, mood),
+      message: buildFallbackMessage(locale, mood, userInput),
       source: 'fallback',
       notice: 'OpenAI APIキーが設定されていないため、テンプレートからメッセージを返しました。',
     };
@@ -56,16 +66,7 @@ export async function fetchAIEncouragement({
         model: 'gpt-4o-mini',
         temperature: 0.8,
         max_tokens: 200,
-        messages: [
-          {
-            role: 'system',
-            content: 'あなたは優しいカウンセラーです。女性の自己肯定感を高める言葉を作ります。',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+        messages,
       }),
     });
 
@@ -87,11 +88,12 @@ export async function fetchAIEncouragement({
     };
   } catch (error) {
     return {
-      message: buildFallbackMessage(locale, mood),
+      message: buildFallbackMessage(locale, mood, userInput),
       source: 'fallback',
       notice: `AIメッセージ生成でエラーが発生したため、テンプレートからメッセージを返しました。 (${(error as Error).message})`,
     };
   }
 }
 
-export type { Mood, SupportedLocale };
+export type { Mood, SupportedLocale, ConversationTurn };
+export { ASSISTANT_NAME, ASSISTANT_AVATAR, ASSISTANT_TAGLINE } from './messagePrompt';
